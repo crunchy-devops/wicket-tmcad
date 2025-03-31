@@ -1,6 +1,6 @@
-# Point3D Implementation
+# Point3D and PointCloud Implementation
 
-A memory-efficient, immutable 3D point implementation in Java with comprehensive test coverage.
+A memory-efficient, immutable 3D point implementation in Java with comprehensive test coverage, including a PointCloud class for geometric operations.
 
 ## Features
 
@@ -9,6 +9,11 @@ A memory-efficient, immutable 3D point implementation in Java with comprehensive
 - Thread-safe due to immutability
 - Comprehensive unit tests with 80% code coverage requirement
 - Proper implementation of `equals()`, `hashCode()`, and `toString()`
+- PointCloud class with geometric operations:
+  - Distance calculation between points
+  - Slope calculation (angle from horizontal plane)
+  - Bearing angle calculation (angle from true north)
+  - Efficient point storage with unique IDs
 
 ## Requirements
 
@@ -20,9 +25,11 @@ A memory-efficient, immutable 3D point implementation in Java with comprehensive
 ```
 src/
 ├── main/java/com/crunchydevops/
-│   └── Point3D.java           # Main implementation
+│   ├── Point3D.java           # Main point implementation
+│   └── PointCloud.java        # Point cloud with geometric operations
 └── test/java/com/crunchydevops/
-    └── Point3DTest.java       # Test suite
+    ├── Point3DTest.java       # Point3D test suite
+    └── PointCloudTest.java    # PointCloud test suite
 ```
 
 ## Building and Testing
@@ -55,6 +62,20 @@ float z = point.getZ(); // 3.0f
 // Compare points
 Point3D another = new Point3D(1.0f, 2.0f, 3.0f);
 boolean areEqual = point.equals(another); // true
+
+// Create points
+Point3D p1 = new Point3D(0.0f, 0.0f, 0.0f);
+Point3D p2 = new Point3D(3.0f, 4.0f, 0.0f);
+
+// Create a point cloud
+PointCloud cloud = new PointCloud();
+cloud.addPoint(1L, p1);
+cloud.addPoint(2L, p2);
+
+// Calculate geometric properties
+double distance = cloud.distance(1L, 2L).orElse(0.0); // 5.0
+double slope = cloud.slope(1L, 2L).orElse(0.0);       // 0.0 degrees (horizontal)
+double bearing = cloud.bearing(1L, 2L).orElse(0.0);   // ~36.87 degrees
 ```
 
 ## Code Coverage Requirements
