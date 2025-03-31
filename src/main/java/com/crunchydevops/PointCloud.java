@@ -72,17 +72,19 @@ public class PointCloud {
     }
 
     /**
-     * Calculates the slope (angle from horizontal plane) between two points.
-     * The slope is returned in degrees, where:
+     * Calculates the slope (grade) between two points as a percentage.
+     * The slope is returned as a percentage, where:
      * - Positive values indicate p2 is higher than p1
      * - Negative values indicate p2 is lower than p1
-     * - 0 degrees indicates points are at the same height
-     * - 90 degrees indicates p2 is directly above p1
-     * - -90 degrees indicates p2 is directly below p1
+     * - 0% indicates points are at the same height
+     * - 100% indicates a 45-degree upward slope
+     * - -100% indicates a 45-degree downward slope
+     * - Infinity indicates a vertical upward slope
+     * - Negative infinity indicates a vertical downward slope
      *
      * @param id1 ID of the first point
      * @param id2 ID of the second point
-     * @return Optional containing the slope in degrees if both points exist, empty otherwise
+     * @return Optional containing the slope as a percentage if both points exist, empty otherwise
      */
     public Optional<Double> slope(long id1, long id2) {
         Point3D p1 = points.get(id1);
@@ -101,11 +103,17 @@ public class PointCloud {
         
         // Handle case where points are directly above/below each other
         if (horizontalDist == 0) {
-            return Optional.of(dz > 0 ? 90.0 : (dz < 0 ? -90.0 : 0.0));
+            if (dz > 0) {
+                return Optional.of(Double.POSITIVE_INFINITY);
+            } else if (dz < 0) {
+                return Optional.of(Double.NEGATIVE_INFINITY);
+            } else {
+                return Optional.of(0.0);
+            }
         }
 
-        // Convert to degrees
-        return Optional.of(toDegrees(atan2(dz, horizontalDist)));
+        // Calculate slope as percentage (rise/run × 100)
+        return Optional.of((dz / horizontalDist) * 100.0);
     }
 
     /**

@@ -7,7 +7,7 @@ import static org.junit.jupiter.api.Assertions.*;
 /**
  * Test class for PointCloud
  */
-public class PointCloudTest {
+ class PointCloudTest {
     private PointCloud cloud;
     private Point3D p1, p2, p3;
 
@@ -71,14 +71,42 @@ public class PointCloudTest {
         cloud.addPoint(2L, p2);
         cloud.addPoint(3L, p3);
 
-        // Slope between p1 and p2 (horizontal) should be 0
+        // Slope between p1 and p2 (horizontal) should be 0%
         assertEquals(0.0, cloud.slope(1L, 2L).orElse(-999.0), 0.0001);
         
-        // Slope between p2 and p3 should be 90 degrees (vertical)
-        assertEquals(90.0, cloud.slope(2L, 3L).orElse(-999.0), 0.0001);
+        // Slope between p2 and p3 should be infinite (vertical)
+        assertEquals(Double.POSITIVE_INFINITY, cloud.slope(2L, 3L).orElse(-999.0), 0.0001);
+        
+        // Test 45-degree slope (100%)
+        Point3D p4 = new Point3D(1.0f, 0.0f, 1.0f);
+        cloud.addPoint(4L, p4);
+        assertEquals(100.0, cloud.slope(1L, 4L).orElse(-999.0), 0.0001);
+        
+        // Test negative slope
+        Point3D p5 = new Point3D(2.0f, 0.0f, -1.0f);
+        cloud.addPoint(5L, p5);
+        assertEquals(-50.0, cloud.slope(1L, 5L).orElse(-999.0), 0.0001);
         
         // Test with non-existent point
-        assertTrue(cloud.slope(1L, 4L).isEmpty());
+        assertTrue(cloud.slope(1L, 6L).isEmpty());
+    }
+
+    @Test
+    void testSpecialCases() {
+        Point3D vertical = new Point3D(0.0f, 0.0f, 5.0f);
+        Point3D negativeVertical = new Point3D(0.0f, 0.0f, -5.0f);
+        cloud.addPoint(1L, p1);
+        cloud.addPoint(2L, vertical);
+        cloud.addPoint(3L, negativeVertical);
+        
+        // Slope should be positive infinity for vertical upward alignment
+        assertEquals(Double.POSITIVE_INFINITY, cloud.slope(1L, 2L).orElse(-999.0), 0.0001);
+        
+        // Slope should be negative infinity for vertical downward alignment
+        assertEquals(Double.NEGATIVE_INFINITY, cloud.slope(1L, 3L).orElse(-999.0), 0.0001);
+        
+        // Bearing should be empty for vertical alignment
+        assertTrue(cloud.bearing(1L, 2L).isEmpty());
     }
 
     @Test
@@ -95,18 +123,5 @@ public class PointCloudTest {
         
         // Test with non-existent point
         assertTrue(cloud.bearing(1L, 4L).isEmpty());
-    }
-
-    @Test
-    void testSpecialCases() {
-        Point3D vertical = new Point3D(0.0f, 0.0f, 5.0f);
-        cloud.addPoint(1L, p1);
-        cloud.addPoint(2L, vertical);
-        
-        // Slope should be 90 degrees for vertical alignment
-        assertEquals(90.0, cloud.slope(1L, 2L).orElse(-999.0), 0.0001);
-        
-        // Bearing should be empty for vertical alignment
-        assertTrue(cloud.bearing(1L, 2L).isEmpty());
     }
 }

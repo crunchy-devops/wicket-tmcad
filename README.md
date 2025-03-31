@@ -74,8 +74,38 @@ cloud.addPoint(2L, p2);
 
 // Calculate geometric properties
 double distance = cloud.distance(1L, 2L).orElse(0.0); // 5.0
-double slope = cloud.slope(1L, 2L).orElse(0.0);       // 0.0 degrees (horizontal)
+double slope = cloud.slope(1L, 2L).orElse(0.0);       // 0.0% (horizontal)
 double bearing = cloud.bearing(1L, 2L).orElse(0.0);   // ~36.87 degrees
+```
+
+## DXF Import Demo
+
+The project includes a demo application that shows how to:
+1. Load points from a DXF file layer named "z value TN"
+2. Create a point cloud from the imported points
+3. Perform random geometric calculations between points
+
+To run the demo:
+1. Place your DXF file in the `data` directory (e.g., `data/survey.dxf`)
+2. Run the demo class:
+```bash
+mvn compile exec:java -Dexec.mainClass="com.crunchydevops.DxfPointCloudDemo"
+```
+
+The demo will:
+- Load all points from the specified DXF layer
+- Perform random calculations (distance, slope, bearing) between points
+- Display the results in human-readable format
+
+Example output:
+```
+Loaded 150 points from DXF file
+
+Calculations between points 45 and 78:
+Distance: 25.30 meters
+Slope: 12.5%
+Bearing: 45.2 degrees
+...
 ```
 
 ## Code Coverage Requirements

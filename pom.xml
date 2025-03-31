@@ -30,7 +30,21 @@
             <version>${junit.jupiter.version}</version>
             <scope>test</scope>
         </dependency>
+        
+        <!-- Kabeja DXF Parser -->
+        <dependency>
+            <groupId>org.kabeja</groupId>
+            <artifactId>kabeja</artifactId>
+            <version>0.4</version>
+        </dependency>
     </dependencies>
+
+    <repositories>
+        <repository>
+            <id>jitpack.io</id>
+            <url>https://jitpack.io</url>
+        </repository>
+    </repositories>
 
     <build>
         <plugins>
@@ -77,6 +91,14 @@
                         </configuration>
                     </execution>
                 </executions>
+            </plugin>
+            <plugin>
+                <groupId>org.codehaus.mojo</groupId>
+                <artifactId>exec-maven-plugin</artifactId>
+                <version>3.1.1</version>
+                <configuration>
+                    <mainClass>com.crunchydevops.DxfPointCloudDemo</mainClass>
+                </configuration>
             </plugin>
         </plugins>
     </build>

@@ -7,10 +7,10 @@ import org.junit.jupiter.api.Test;
  * Test class for Point3D
  * Aims for 80% code coverage by testing all main functionalities
  */
-public class Point3DTest {
+class Point3DTest {
 
     @Test
-    public void testConstructorAndGetters() {
+    void testConstructorAndGetters() {
         Point3D point = new Point3D(1.0f, 2.0f, 3.0f);
         
         assertEquals(1.0f, point.getX(), "X coordinate should be 1.0");
@@ -19,13 +19,13 @@ public class Point3DTest {
     }
 
     @Test
-    public void testEqualsWithSameObject() {
+    void testEqualsWithSameObject() {
         Point3D point = new Point3D(1.0f, 2.0f, 3.0f);
         assertTrue(point.equals(point), "Point should be equal to itself");
     }
 
     @Test
-    public void testEqualsWithEqualObject() {
+    void testEqualsWithEqualObject() {
         Point3D point1 = new Point3D(1.0f, 2.0f, 3.0f);
         Point3D point2 = new Point3D(1.0f, 2.0f, 3.0f);
         assertTrue(point1.equals(point2), "Points with same coordinates should be equal");
@@ -33,26 +33,26 @@ public class Point3DTest {
     }
 
     @Test
-    public void testEqualsWithDifferentObject() {
+    void testEqualsWithDifferentObject() {
         Point3D point1 = new Point3D(1.0f, 2.0f, 3.0f);
         Point3D point2 = new Point3D(1.0f, 2.0f, 3.1f);
         assertFalse(point1.equals(point2), "Points with different coordinates should not be equal");
     }
 
     @Test
-    public void testEqualsWithNull() {
+    void testEqualsWithNull() {
         Point3D point = new Point3D(1.0f, 2.0f, 3.0f);
         assertFalse(point.equals(null), "Point should not be equal to null");
     }
 
     @Test
-    public void testEqualsWithDifferentClass() {
+    void testEqualsWithDifferentClass() {
         Point3D point = new Point3D(1.0f, 2.0f, 3.0f);
         assertFalse(point.equals("not a point"), "Point should not be equal to object of different class");
     }
 
     @Test
-    public void testHashCode() {
+    void testHashCode() {
         Point3D point1 = new Point3D(1.0f, 2.0f, 3.0f);
         Point3D point2 = new Point3D(1.0f, 2.0f, 3.0f);
         Point3D point3 = new Point3D(1.0f, 2.0f, 3.1f);
@@ -64,14 +64,14 @@ public class Point3DTest {
     }
 
     @Test
-    public void testToString() {
+    void testToString() {
         Point3D point = new Point3D(1.0f, 2.0f, 3.0f);
         String expected = "Point3D{x=1.0, y=2.0, z=3.0}";
         assertEquals(expected, point.toString(), "toString should match expected format");
     }
 
     @Test
-    public void testWithZeroValues() {
+    void testWithZeroValues() {
         Point3D point = new Point3D(0.0f, 0.0f, 0.0f);
         assertEquals(0.0f, point.getX(), "X coordinate should be 0.0");
         assertEquals(0.0f, point.getY(), "Y coordinate should be 0.0");
@@ -79,7 +79,7 @@ public class Point3DTest {
     }
 
     @Test
-    public void testWithNegativeValues() {
+    void testWithNegativeValues() {
         Point3D point = new Point3D(-1.0f, -2.0f, -3.0f);
         assertEquals(-1.0f, point.getX(), "X coordinate should be -1.0");
         assertEquals(-2.0f, point.getY(), "Y coordinate should be -2.0");
