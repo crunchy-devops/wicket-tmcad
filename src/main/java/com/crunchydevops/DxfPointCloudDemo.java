@@ -1,11 +1,12 @@
 package com.crunchydevops;
 
-import com.jsevy.jdxf.DXFEntity;
-import com.jsevy.jdxf.DXFDocument;
-import com.jsevy.jdxf.DXFGraphics;
-import com.jsevy.jdxf.DXFPoint;
+import org.kabeja.dxf.*;
+import org.kabeja.parser.DXFParser;
+import org.kabeja.parser.ParseException;
+import org.kabeja.parser.Parser;
+import org.kabeja.parser.ParserBuilder;
 
-import java.io.*;
+import java.io.File;
 import java.util.Random;
 import java.util.List;
 import java.util.ArrayList;
@@ -32,55 +33,27 @@ public class DxfPointCloudDemo {
      * Loads points from a DXF file in the specified layer.
      *
      * @param dxfFile The DXF file to read
-     * @throws IOException if there's an error reading the DXF file
+     * @throws ParseException if there's an error parsing the DXF file
      */
-    public void loadFromDxf(File dxfFile) throws IOException {
-        // Read DXF file content
-        List<String> lines = new ArrayList<>();
-        try (BufferedReader reader = new BufferedReader(new FileReader(dxfFile))) {
-            String line;
-            while ((line = reader.readLine()) != null) {
-                lines.add(line.trim());
-            }
+    public void loadFromDxf(File dxfFile) throws ParseException {
+        Parser parser = ParserBuilder.createDefaultParser();
+        parser.parse(dxfFile.getAbsolutePath());
+        DXFDocument doc = parser.getDocument();
+        
+        DXFLayer layer = doc.getLayer(TARGET_LAYER);
+        if (layer == null) {
+            throw new IllegalArgumentException("Layer '" + TARGET_LAYER + "' not found in DXF file");
         }
 
-        boolean inTargetLayer = false;
-        boolean inPoint = false;
-        float x = 0, y = 0, z = 0;
-
-        // Parse DXF file manually
-        for (int i = 0; i < lines.size(); i++) {
-            String line = lines.get(i);
-            String nextLine = (i + 1 < lines.size()) ? lines.get(i + 1) : "";
-
-            // Check for layer
-            if (line.equals("8") && nextLine.equals(TARGET_LAYER)) {
-                inTargetLayer = true;
-                continue;
-            }
-
-            // Check for point entity
-            if (line.equals("0") && nextLine.equals("POINT")) {
-                inPoint = true;
-                continue;
-            }
-
-            // Get coordinates if we're in a point in the target layer
-            if (inTargetLayer && inPoint) {
-                if (line.equals("10")) { // X coordinate
-                    x = Float.parseFloat(nextLine);
-                } else if (line.equals("20")) { // Y coordinate
-                    y = Float.parseFloat(nextLine);
-                } else if (line.equals("30")) { // Z coordinate
-                    z = Float.parseFloat(nextLine);
-                    // Create point and add to cloud
-                    Point3D point = new Point3D(x, y, z);
-                    pointCloud.addPoint(nextId++, point);
-                    // Reset flags
-                    inTargetLayer = false;
-                    inPoint = false;
-                }
-            }
+        // Process points in the layer
+        for (DXFEntity entity : layer.getDXFEntities(DXFConstants.ENTITY_TYPE_POINT)) {
+            DXFPoint point = (DXFPoint) entity;
+            Point3D p3d = new Point3D(
+                (float) point.getX(),
+                (float) point.getY(),
+                (float) point.getZ()
+            );
+            pointCloud.addPoint(nextId++, p3d);
         }
 
         System.out.println("Loaded " + pointCloud.size() + " points from DXF file");
@@ -143,8 +116,8 @@ public class DxfPointCloudDemo {
             // Perform some random calculations
             demo.performRandomCalculations(5);
             
-        } catch (IOException e) {
-            System.err.println("Error reading DXF file: " + e.getMessage());
+        } catch (ParseException e) {
+            System.err.println("Error parsing DXF file: " + e.getMessage());
         } catch (Exception e) {
             System.err.println("Error: " + e.getMessage());
             e.printStackTrace();
