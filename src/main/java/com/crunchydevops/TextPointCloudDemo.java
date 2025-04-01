@@ -107,7 +107,7 @@ public class TextPointCloudDemo {
         for (long id = 1; id < nextId; id++) {
             Optional<Point3D> point = pointCloud.getPoint(id);
             if (point.isPresent()) {
-                float z = point.get().z();
+                float z = point.get().getZ();
                 if (z < minZ) {
                     minZ = z;
                     lowestPoint = point;
@@ -126,9 +126,9 @@ public class TextPointCloudDemo {
         
         if (lowestPoint.isPresent() && highestPoint.isPresent()) {
             System.out.printf("Lowest point (ID: %d): %.2f, %.2f, %.2f%n",
-                lowestId, lowestPoint.get().x(), lowestPoint.get().y(), lowestPoint.get().z());
+                lowestId, lowestPoint.get().getX(), lowestPoint.get().getY(), lowestPoint.get().getZ());
             System.out.printf("Highest point (ID: %d): %.2f, %.2f, %.2f%n",
-                highestId, highestPoint.get().x(), highestPoint.get().y(), highestPoint.get().z());
+                highestId, highestPoint.get().getX(), highestPoint.get().getY(), highestPoint.get().getZ());
             
             // Calculate geometric properties between highest and lowest points
             System.out.println("\nGeometric Properties:");
