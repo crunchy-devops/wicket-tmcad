@@ -1,11 +1,16 @@
 package com.crunchydevops;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 /**
  * An immutable 3D point representation using float coordinates.
  * This class provides a memory-efficient way to store 3D coordinates
  * while ensuring immutability.
  */
 public final class Point3D {
+    private static final Logger logger = LoggerFactory.getLogger(Point3D.class);
+
     private final float x;
     private final float y;
     private final float z;
@@ -18,6 +23,7 @@ public final class Point3D {
      * @param z The z coordinate
      */
     public Point3D(float x, float y, float z) {
+        logger.trace("Creating new Point3D({}, {}, {})", x, y, z);
         this.x = x;
         this.y = y;
         this.z = z;

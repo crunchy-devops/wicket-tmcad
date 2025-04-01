@@ -1,5 +1,8 @@
 package com.crunchydevops.dxf;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -9,6 +12,8 @@ import java.util.*;
  * A modern Java 17 DXF file reader that extracts layer information.
  */
 public class DxfReader {
+    private static final Logger logger = LoggerFactory.getLogger(DxfReader.class);
+
     // DXF keywords
     private static final String SECTION = "SECTION";
     private static final String ENDSEC = "ENDSEC";
@@ -29,13 +34,16 @@ public class DxfReader {
     private final Map<String, DxfLayer> layers = new HashMap<>();
     
     public DxfReader(Path filePath) throws IOException {
+        logger.info("Reading DXF file: {}", filePath);
         this.lines = Files.readAllLines(filePath);
+        logger.debug("Read {} lines from file", lines.size());
     }
     
     /**
      * Reads and processes the entire DXF file.
      */
     public Map<String, DxfLayer> readLayers() {
+        logger.info("Starting to process DXF file");
         while (currentLine < lines.size()) {
             String groupCode = lines.get(currentLine++).trim();
             String value = currentLine < lines.size() ? lines.get(currentLine++).trim() : "";
@@ -44,6 +52,7 @@ public class DxfReader {
                 processSection();
             }
         }
+        logger.info("Finished processing DXF file. Found {} layers", layers.size());
         return layers;
     }
     
@@ -55,20 +64,26 @@ public class DxfReader {
             currentLine += 2;
         }
         
+        logger.debug("Processing section: {}", sectionType);
         switch (sectionType) {
             case TABLES -> processTables();
             case ENTITIES -> processEntities();
-            default -> skipSection();
+            default -> {
+                logger.debug("Skipping unknown section: {}", sectionType);
+                skipSection();
+            }
         }
     }
     
     private void processTables() {
+        logger.debug("Processing TABLES section");
         while (currentLine < lines.size()) {
             String groupCode = lines.get(currentLine++).trim();
             String value = currentLine < lines.size() ? lines.get(currentLine++).trim() : "";
             
             if (GROUP_CODE_0.equals(groupCode)) {
                 if (ENDSEC.equals(value)) {
+                    logger.debug("Finished processing TABLES section");
                     return;
                 } else if (TABLE.equals(value)) {
                     processTable();
@@ -85,20 +100,24 @@ public class DxfReader {
             currentLine += 2;
         }
         
+        logger.debug("Processing table: {}", tableType);
         if (LAYER.equals(tableType)) {
             processLayerTable();
         } else {
+            logger.debug("Skipping unknown table: {}", tableType);
             skipTable();
         }
     }
     
     private void processLayerTable() {
+        logger.debug("Processing LAYER table");
         while (currentLine < lines.size()) {
             String groupCode = lines.get(currentLine++).trim();
             String value = currentLine < lines.size() ? lines.get(currentLine++).trim() : "";
             
             if (GROUP_CODE_0.equals(groupCode)) {
                 if (ENDTAB.equals(value)) {
+                    logger.debug("Finished processing LAYER table");
                     return;
                 } else if (LAYER.equals(value)) {
                     processLayerDefinition();
@@ -108,6 +127,7 @@ public class DxfReader {
     }
     
     private void processLayerDefinition() {
+        logger.debug("Processing layer definition");
         String name = "";
         int color = 7;
         String lineType = "CONTINUOUS";
@@ -134,11 +154,13 @@ public class DxfReader {
         }
         
         if (!name.isEmpty()) {
+            logger.debug("Adding layer: {}", name);
             layers.put(name, new DxfLayer(name, Math.abs(color), lineType, isVisible, new ArrayList<>()));
         }
     }
     
     private void skipTable() {
+        logger.debug("Skipping table");
         while (currentLine < lines.size()) {
             String groupCode = lines.get(currentLine++).trim();
             String value = currentLine < lines.size() ? lines.get(currentLine++).trim() : "";
@@ -149,10 +171,12 @@ public class DxfReader {
         }
     }
     
+    /**
+     * Processes the ENTITIES section of the DXF file.
+     */
     private void processEntities() {
-        String currentLayer = "0";  // Default layer
-        Map<Integer, String> groupCodes = new HashMap<>();
-        String entityType = "";
+        EntityProcessor processor = new EntityProcessor();
+        logger.debug("Starting to process ENTITIES section");
         
         while (currentLine < lines.size()) {
             String groupCode = lines.get(currentLine++).trim();
@@ -160,43 +184,83 @@ public class DxfReader {
             
             if (GROUP_CODE_0.equals(groupCode)) {
                 if (ENDSEC.equals(value)) {
-                    // Add last entity if exists
-                    if (!entityType.isEmpty()) {
-                        addEntityToLayer(currentLayer, new DxfEntity(entityType, groupCodes));
-                    }
+                    processor.addCurrentEntity();
+                    logger.debug("Finished processing ENTITIES section");
                     return;
                 }
-                
-                // Add previous entity if exists
-                if (!entityType.isEmpty()) {
-                    addEntityToLayer(currentLayer, new DxfEntity(entityType, groupCodes));
-                    groupCodes = new HashMap<>();
-                }
-                
-                entityType = value;
+                processor.startNewEntity(value);
                 continue;
             }
             
             if (GROUP_CODE_8.equals(groupCode)) {
-                currentLayer = value;
+                processor.setCurrentLayer(value);
                 continue;
             }
             
+            processor.addGroupCode(groupCode, value);
+        }
+    }
+    
+    /**
+     * Helper class to manage entity processing state.
+     */
+    private class EntityProcessor {
+        private String currentLayer = "0";  // Default layer
+        private Map<Integer, String> groupCodes = new HashMap<>();
+        private String entityType = "";
+        
+        /**
+         * Starts processing a new entity.
+         */
+        void startNewEntity(String type) {
+            addCurrentEntity();
+            entityType = type;
+            groupCodes = new HashMap<>();
+            logger.trace("Starting new entity of type: {}", type);
+        }
+        
+        /**
+         * Sets the current layer for subsequent entities.
+         */
+        void setCurrentLayer(String layer) {
+            logger.trace("Switching to layer: {}", layer);
+            currentLayer = layer;
+        }
+        
+        /**
+         * Adds a group code to the current entity.
+         */
+        void addGroupCode(String code, String value) {
             try {
-                int code = Integer.parseInt(groupCode);
-                groupCodes.put(code, value);
+                int groupCode = Integer.parseInt(code);
+                groupCodes.put(groupCode, value);
+                logger.trace("Added group code {} = {} to entity", groupCode, value);
             } catch (NumberFormatException e) {
-                // Skip invalid group codes
+                logger.warn("Invalid group code: {}", code);
+            }
+        }
+        
+        /**
+         * Adds the current entity to its layer if valid.
+         */
+        void addCurrentEntity() {
+            if (!entityType.isEmpty()) {
+                DxfEntity entity = new DxfEntity(entityType, groupCodes);
+                addEntityToLayer(currentLayer, entity);
+                logger.debug("Added {} entity to layer '{}'", entityType, currentLayer);
             }
         }
     }
     
     private void addEntityToLayer(String layerName, DxfEntity entity) {
-        layers.computeIfAbsent(layerName, DxfLayer::create)
-              .addEntity(entity);
+        layers.computeIfAbsent(layerName, name -> {
+            logger.debug("Creating new layer: {}", name);
+            return DxfLayer.create(name);
+        }).addEntity(entity);
     }
     
     private void skipSection() {
+        logger.debug("Skipping section");
         while (currentLine < lines.size()) {
             String groupCode = lines.get(currentLine++).trim();
             String value = currentLine < lines.size() ? lines.get(currentLine++).trim() : "";

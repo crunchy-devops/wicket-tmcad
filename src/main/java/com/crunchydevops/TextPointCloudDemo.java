@@ -3,6 +3,8 @@ package com.crunchydevops;
 import com.crunchydevops.dxf.DxfEntity;
 import com.crunchydevops.dxf.DxfLayer;
 import com.crunchydevops.dxf.DxfReader;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.nio.file.Path;
 import java.util.Map;
@@ -15,6 +17,7 @@ import java.util.Optional;
  * - Z coordinate is parsed from the text content
  */
 public class TextPointCloudDemo {
+    private static final Logger logger = LoggerFactory.getLogger(TextPointCloudDemo.class);
     private static final String TARGET_LAYER = "z value TN";
     private final PointCloud pointCloud;
     private long nextId = 1;
@@ -45,10 +48,11 @@ public class TextPointCloudDemo {
             // Create point and add to cloud
             Point3D point = new Point3D(x, y, z);
             pointCloud.addPoint(nextId++, point);
+            logger.trace("Added point: {}", point);
             
         } catch (NumberFormatException e) {
             // Skip invalid points
-            System.err.println("Skipping invalid point: " + e.getMessage());
+            logger.error("Failed to parse coordinates from TEXT entity: {}", entity);
         }
     }
 
@@ -57,16 +61,17 @@ public class TextPointCloudDemo {
      */
     public void loadFromDxf(String filePath) {
         try {
-            System.out.println("Reading DXF file: " + filePath);
-            System.out.println("Target layer: " + TARGET_LAYER);
+            logger.info("Reading DXF file: {}", filePath);
+            logger.info("Target layer: {}", TARGET_LAYER);
             
             DxfReader reader = new DxfReader(Path.of(filePath));
             Map<String, DxfLayer> layers = reader.readLayers();
+            logger.debug("Found {} layers in file", layers.size());
             
             // Get target layer
             DxfLayer layer = layers.get(TARGET_LAYER);
             if (layer == null) {
-                System.err.println("Layer '" + TARGET_LAYER + "' not found in DXF file");
+                logger.error("Layer '{}' not found in DXF file", TARGET_LAYER);
                 return;
             }
             
@@ -79,12 +84,11 @@ public class TextPointCloudDemo {
                 }
             }
             
-            System.out.printf("Processed %d TEXT entities from layer '%s'%n", textCount, TARGET_LAYER);
-            System.out.printf("Created %d valid points%n", pointCloud.size());
+            logger.info("Processed {} TEXT entities from layer '{}'", textCount, TARGET_LAYER);
+            logger.info("Created {} valid points", pointCloud.size());
             
         } catch (Exception e) {
-            System.err.println("Error processing DXF file: " + e.getMessage());
-            e.printStackTrace();
+            logger.error("Error processing DXF file: {}", e.getMessage());
         }
     }
 
@@ -93,7 +97,7 @@ public class TextPointCloudDemo {
      */
     public void performCalculations() {
         if (pointCloud.size() < 2) {
-            System.out.println("Not enough points for calculations");
+            logger.info("Not enough points for calculations");
             return;
         }
 
@@ -121,27 +125,27 @@ public class TextPointCloudDemo {
             }
         }
 
-        System.out.println("\nPoint Analysis:");
-        System.out.println("=".repeat(40));
+        logger.info("\nPoint Analysis:");
+        logger.info("=".repeat(40));
         
         if (lowestPoint.isPresent() && highestPoint.isPresent()) {
-            System.out.printf("Lowest point (ID: %d): %.2f, %.2f, %.2f%n",
+            logger.info("Lowest point (ID: {}): {:.2f}, {:.2f}, {:.2f}",
                 lowestId, lowestPoint.get().getX(), lowestPoint.get().getY(), lowestPoint.get().getZ());
-            System.out.printf("Highest point (ID: %d): %.2f, %.2f, %.2f%n",
+            logger.info("Highest point (ID: {}): {:.2f}, {:.2f}, {:.2f}",
                 highestId, highestPoint.get().getX(), highestPoint.get().getY(), highestPoint.get().getZ());
             
             // Calculate geometric properties between highest and lowest points
-            System.out.println("\nGeometric Properties:");
-            System.out.println("-".repeat(40));
+            logger.info("\nGeometric Properties:");
+            logger.info("-".repeat(40));
             
             pointCloud.distance(lowestId, highestId)
-                .ifPresent(distance -> System.out.printf("Distance: %.2f meters%n", distance));
+                .ifPresent(distance -> logger.info("Distance: {:.2f} meters", distance));
             
             pointCloud.slope(lowestId, highestId)
-                .ifPresent(slope -> System.out.printf("Slope: %.1f%%%n", slope));
+                .ifPresent(slope -> logger.info("Slope: {:.1f}%%", slope));
             
             pointCloud.bearing(lowestId, highestId)
-                .ifPresent(bearing -> System.out.printf("Bearing: %.1f degrees%n", bearing));
+                .ifPresent(bearing -> logger.info("Bearing: {:.1f} degrees", bearing));
         }
     }
 
