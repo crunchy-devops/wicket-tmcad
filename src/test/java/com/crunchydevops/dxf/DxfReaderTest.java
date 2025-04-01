@@ -118,8 +118,7 @@ class DxfReaderTest {
     @Test
     void testNonexistentFile() {
         Path nonexistentFile = Path.of("nonexistent.dxf");
-        DxfReader reader = new DxfReader(nonexistentFile);
         
-        assertThrows(RuntimeException.class, () -> reader.readLayers());
+        assertThrows(IOException.class, () -> new DxfReader(nonexistentFile));
     }
 }
