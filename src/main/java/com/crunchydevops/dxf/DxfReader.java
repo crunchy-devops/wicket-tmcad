@@ -4,17 +4,22 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.security.SecureRandom;
 import java.util.*;
 
 /**
  * A modern Java 17 DXF file reader that extracts layer information.
+ * Implements security best practices for file handling and input validation.
  */
 public class DxfReader {
     private static final Logger logger = LoggerFactory.getLogger(DxfReader.class);
+    private static final int MAX_FILE_SIZE = 50 * 1024 * 1024; // 50MB limit
+    private static final SecureRandom secureRandom = new SecureRandom();
 
-    // DXF keywords
+    // DXF keywords as constants
     private static final String SECTION = "SECTION";
     private static final String ENDSEC = "ENDSEC";
     private static final String TABLES = "TABLES";
@@ -34,15 +39,83 @@ public class DxfReader {
     private final Map<String, DxfLayer> layers = new HashMap<>();
     
     public DxfReader(Path filePath) throws IOException {
+        if (!Files.exists(filePath)) {
+            logger.error("File does not exist: {}", filePath);
+            throw new IOException("File does not exist: " + filePath);
+        }
+        if (!Files.isRegularFile(filePath)) {
+            logger.error("Not a regular file: {}", filePath);
+            throw new IOException("Not a regular file: " + filePath);
+        }
+        if (Files.size(filePath) > MAX_FILE_SIZE) {
+            logger.error("File too large ({}MB), max size is {}MB", 
+                Files.size(filePath) / (1024 * 1024), MAX_FILE_SIZE / (1024 * 1024));
+            throw new IOException("File too large");
+        }
+
         logger.info("Reading DXF file: {}", filePath);
-        this.lines = Files.readAllLines(filePath);
+        this.lines = Files.readAllLines(filePath, StandardCharsets.UTF_8);
         logger.debug("Read {} lines from file", lines.size());
+        
+        // Validate file content
+        validateFileContent();
+    }
+
+    private void validateFileContent() throws IOException {
+        if (lines.isEmpty()) {
+            throw new IOException("Empty DXF file");
+        }
+
+        // Basic DXF structure validation
+        boolean hasSection = false;
+        for (String line : lines) {
+            if (line != null && line.trim().equals(SECTION)) {
+                hasSection = true;
+                break;
+            }
+        }
+        if (!hasSection) {
+            throw new IOException("Invalid DXF file: no SECTION found");
+        }
+    }
+
+    /**
+     * Reads and processes the entire DXF file with input validation.
+     */
+    public Map<String, DxfLayer> readLayers() {
+        logger.info("Starting to process DXF file");
+        try {
+            while (currentLine < lines.size()) {
+                String groupCode = getValidatedLine();
+                String value = currentLine < lines.size() ? getValidatedLine() : "";
+                
+                if (GROUP_CODE_0.equals(groupCode) && SECTION.equals(value)) {
+                    processSection();
+                }
+            }
+        } catch (Exception e) {
+            logger.error("Error processing DXF file: {}", e.getMessage());
+            return new HashMap<>(); // Return empty map instead of null
+        }
+        
+        logger.info("Finished processing DXF file. Found {} layers", layers.size());
+        return Collections.unmodifiableMap(new HashMap<>(layers)); // Return immutable copy
+    }
+
+    private String getValidatedLine() {
+        String line = lines.get(currentLine++).trim();
+        // Prevent null values and ensure reasonable line length
+        if (line == null || line.length() > 1000) {
+            logger.warn("Invalid line at position {}, using empty string", currentLine - 1);
+            return "";
+        }
+        return line;
     }
     
     /**
      * Reads and processes the entire DXF file.
      */
-    public Map<String, DxfLayer> readLayers() {
+    public Map<String, DxfLayer> readLayersOld() {
         logger.info("Starting to process DXF file");
         while (currentLine < lines.size()) {
             String groupCode = lines.get(currentLine++).trim();
@@ -134,29 +207,44 @@ public class DxfReader {
         boolean isVisible = true;
         
         while (currentLine < lines.size()) {
-            String groupCode = lines.get(currentLine++).trim();
-            String value = currentLine < lines.size() ? lines.get(currentLine++).trim() : "";
+            String groupCode = getValidatedLine();
+            String value = currentLine < lines.size() ? getValidatedLine() : "";
             
             if (GROUP_CODE_0.equals(groupCode)) {
                 currentLine -= 2; // Back up so next reader sees this
                 break;
             }
             
+            // Validate value length before processing
+            if (value.length() > 255) {
+                logger.warn("Value too long at line {}, truncating", currentLine - 1);
+                value = value.substring(0, 255);
+            }
+            
             switch (groupCode) {
-                case GROUP_CODE_2 -> name = value;
+                case GROUP_CODE_2 -> name = sanitizeName(value);
                 case GROUP_CODE_62 -> {
-                    color = Integer.parseInt(value);
-                    isVisible = color >= 0;
+                    try {
+                        color = Integer.parseInt(value);
+                        isVisible = color >= 0;
+                    } catch (NumberFormatException e) {
+                        logger.warn("Invalid color value: {}", value);
+                        color = 7; // Default color
+                    }
                 }
-                case GROUP_CODE_6 -> lineType = value;
+                case GROUP_CODE_6 -> lineType = sanitizeName(value);
                 default -> {} // Skip other group codes
             }
         }
         
         if (!name.isEmpty()) {
-            logger.debug("Adding layer: {}", name);
             layers.put(name, new DxfLayer(name, Math.abs(color), lineType, isVisible, new ArrayList<>()));
         }
+    }
+    
+    private String sanitizeName(String input) {
+        // Remove any non-alphanumeric characters except underscore and hyphen
+        return input.replaceAll("[^a-zA-Z0-9_-]", "_");
     }
     
     private void skipTable() {
@@ -232,9 +320,20 @@ public class DxfReader {
          */
         void addGroupCode(String code, String value) {
             try {
+                // Validate group code range
                 int groupCode = Integer.parseInt(code);
-                groupCodes.put(groupCode, value);
-                logger.trace("Added group code {} = {} to entity", groupCode, value);
+                if (groupCode < 0 || groupCode > 1071) {
+                    logger.warn("Invalid group code range: {}", groupCode);
+                    return;
+                }
+                
+                // Validate value length
+                if (value != null && value.length() <= 255) {
+                    groupCodes.put(groupCode, value);
+                    logger.trace("Added group code {} = {} to entity", groupCode, value);
+                } else {
+                    logger.warn("Invalid value length for group code {}", groupCode);
+                }
             } catch (NumberFormatException e) {
                 logger.warn("Invalid group code: {}", code);
             }
