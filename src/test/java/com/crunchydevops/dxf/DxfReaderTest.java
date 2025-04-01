@@ -89,7 +89,7 @@ class DxfReaderTest {
         assertTrue(layers.containsKey("z value TN"));
         DxfLayer layer = layers.get("z value TN");
         assertEquals("z value TN", layer.name());
-        assertEquals(7, layer.color());
+        assertEquals(7, layer.colorNumber());
         assertEquals("CONTINUOUS", layer.lineType());
         assertTrue(layer.isVisible());
         

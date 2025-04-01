@@ -13,15 +13,15 @@ class DxfLayerTest {
     @Test
     void testCreateLayer() {
         String name = "z value TN";
-        int color = 7;
+        int colorNumber = 7;
         String lineType = "CONTINUOUS";
         boolean isVisible = true;
         List<DxfEntity> entities = new ArrayList<>();
 
-        DxfLayer layer = new DxfLayer(name, color, lineType, isVisible, entities);
+        DxfLayer layer = new DxfLayer(name, colorNumber, lineType, isVisible, entities);
         
         assertEquals(name, layer.name());
-        assertEquals(color, layer.color());
+        assertEquals(colorNumber, layer.colorNumber());
         assertEquals(lineType, layer.lineType());
         assertTrue(layer.isVisible());
         assertEquals(entities, layer.entities());
@@ -84,6 +84,6 @@ class DxfLayerTest {
         DxfLayer layer = new DxfLayer("Hidden", -7, "CONTINUOUS", false, new ArrayList<>());
         
         assertFalse(layer.isVisible());
-        assertEquals(-7, layer.color());
+        assertEquals(-7, layer.colorNumber());
     }
 }
