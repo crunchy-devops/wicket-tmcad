@@ -28,13 +28,31 @@ class DxfReaderTest {
     @DisplayName("Basic DXF File Tests")
     class BasicDxfTests {
         @Test
-        @DisplayName("Empty DXF file should have no layers")
+        @DisplayName("Empty but valid DXF file should have no layers")
         void testEmptyDxf() throws IOException {
             String minimalDxf = """
                 0
                 SECTION
                 2
                 HEADER
+                0
+                ENDSEC
+                0
+                SECTION
+                2
+                TABLES
+                0
+                TABLE
+                2
+                LAYER
+                0
+                ENDTAB
+                0
+                ENDSEC
+                0
+                SECTION
+                2
+                ENTITIES
                 0
                 ENDSEC
                 0
@@ -49,14 +67,14 @@ class DxfReaderTest {
         }
 
         @Test
-        @DisplayName("Invalid DXF file should return empty layer map")
+        @DisplayName("Invalid DXF file should throw IllegalArgumentException")
         void testInvalidDxf() throws IOException {
             Path dxfFile = createDxfFile("invalid.dxf", "This is not a DXF file");
 
-            DxfReader reader = new DxfReader(dxfFile);
-            Map<String, DxfLayer> layers = reader.readLayers();
-            
-            assertTrue(layers.isEmpty(), "Invalid DXF should have no layers");
+            assertThrows(IllegalArgumentException.class, () -> {
+                DxfReader reader = new DxfReader(dxfFile);
+                reader.readLayers();
+            }, "Should throw IllegalArgumentException for invalid DXF content");
         }
 
         @Test
@@ -72,13 +90,19 @@ class DxfReaderTest {
     @Nested
     @DisplayName("Layer Tests")
     class LayerTests {
-        private static final String LAYER_NAME = "z value TN";
+        private static final String LAYER_NAME = "z_value_TN";
         private static final String HIDDEN_LAYER = "HIDDEN_LAYER";
         
         @Test
         @DisplayName("Layer with TEXT entity should be correctly read")
         void testLayerWithText() throws IOException {
             String dxfContent = """
+                0
+                SECTION
+                2
+                HEADER
+                0
+                ENDSEC
                 0
                 SECTION
                 2
@@ -153,6 +177,12 @@ class DxfReaderTest {
                 0
                 SECTION
                 2
+                HEADER
+                0
+                ENDSEC
+                0
+                SECTION
+                2
                 TABLES
                 0
                 TABLE
@@ -173,6 +203,12 @@ class DxfReaderTest {
                 0
                 ENDSEC
                 0
+                SECTION
+                2
+                ENTITIES
+                0
+                ENDSEC
+                0
                 EOF
                 """.formatted(HIDDEN_LAYER);
             
@@ -188,6 +224,83 @@ class DxfReaderTest {
                 () -> assertEquals(-7, layer.colorNumber(), "Color should be -7"),
                 () -> assertEquals("CONTINUOUS", layer.lineType(), "Line type should be CONTINUOUS"),
                 () -> assertFalse(layer.isVisible(), "Layer should be invisible")
+            );
+        }
+
+        @Test
+        @DisplayName("Multiple layers should be correctly read")
+        void testMultipleLayers() throws IOException {
+            String dxfContent = """
+                0
+                SECTION
+                2
+                HEADER
+                0
+                ENDSEC
+                0
+                SECTION
+                2
+                TABLES
+                0
+                TABLE
+                2
+                LAYER
+                0
+                LAYER
+                2
+                %s
+                70
+                0
+                62
+                7
+                6
+                CONTINUOUS
+                0
+                LAYER
+                2
+                %s
+                70
+                0
+                62
+                -7
+                6
+                CONTINUOUS
+                0
+                ENDTAB
+                0
+                ENDSEC
+                0
+                SECTION
+                2
+                ENTITIES
+                0
+                ENDSEC
+                0
+                EOF
+                """.formatted(LAYER_NAME, HIDDEN_LAYER);
+            
+            Path dxfFile = createDxfFile("multiple.dxf", dxfContent);
+            DxfReader reader = new DxfReader(dxfFile);
+            Map<String, DxfLayer> layers = reader.readLayers();
+            
+            assertEquals(2, layers.size(), "Should have two layers");
+            assertTrue(layers.containsKey(LAYER_NAME), "First layer should exist");
+            assertTrue(layers.containsKey(HIDDEN_LAYER), "Second layer should exist");
+            
+            // Verify first layer
+            DxfLayer layer1 = layers.get(LAYER_NAME);
+            assertAll("First layer properties",
+                () -> assertEquals(LAYER_NAME, layer1.name()),
+                () -> assertEquals(7, layer1.colorNumber()),
+                () -> assertTrue(layer1.isVisible())
+            );
+            
+            // Verify second layer
+            DxfLayer layer2 = layers.get(HIDDEN_LAYER);
+            assertAll("Second layer properties",
+                () -> assertEquals(HIDDEN_LAYER, layer2.name()),
+                () -> assertEquals(-7, layer2.colorNumber()),
+                () -> assertFalse(layer2.isVisible())
             );
         }
     }
