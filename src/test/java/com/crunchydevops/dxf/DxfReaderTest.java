@@ -27,9 +27,9 @@ class DxfReaderTest {
     @TempDir
     Path tempDir;
     
-    private Path createDxfFile(String filename, String content) throws IOException {
+    private Path createDxfFile(String filename, String description) throws IOException {
         Path dxfFile = tempDir.resolve(filename);
-        Files.writeString(dxfFile, content);
+        Files.writeString(dxfFile, description);
         return dxfFile;
     }
     
@@ -123,12 +123,53 @@ class DxfReaderTest {
         @Test
         @DisplayName("Invalid DXF file should throw IllegalArgumentException")
         void testInvalidDxf() throws IOException {
-            Path dxfFile = createDxfFile("invalid.dxf", "This is not a DXF file");
+            // Test cases for invalid DXF files
+            String[] invalidDxfContents = {
+                "This is not a DXF file",
+                """
+                0
+                INVALID
+                2
+                HEADER
+                0
+                ENDSEC
+                """,
+                """
+                0
+                SECTION
+                2
+                HEADER
+                0
+                ENDSEC
+                0
+                INVALID
+                """,
+                """
+                0
+                SECTION
+                2
+                TABLES
+                0
+                TABLE
+                2
+                INVALID_TABLE
+                0
+                ENDTAB
+                0
+                ENDSEC
+                """
+            };
 
-            assertThrows(IllegalArgumentException.class, () -> {
-                DxfReader reader = new DxfReader(dxfFile);
-                reader.readLayers();
-            }, "Should throw IllegalArgumentException for invalid DXF content");
+            for (String content : invalidDxfContents) {
+                Path dxfFile = createDxfFile("invalid.dxf", content);
+                IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, () -> {
+                    DxfReader reader = new DxfReader(dxfFile);
+                    reader.readLayers();
+                }, "Should throw IllegalArgumentException for invalid DXF content: " + content.substring(0, Math.min(20, content.length())));
+                
+                assertNotNull(exception.getMessage(), "Exception message should not be null");
+                assertTrue(exception.getMessage().length() > 0, "Exception should have a descriptive message");
+            }
         }
 
         @Test
