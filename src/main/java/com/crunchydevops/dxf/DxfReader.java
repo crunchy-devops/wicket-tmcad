@@ -227,6 +227,7 @@ public class DxfReader {
                     try {
                         color = Integer.parseInt(value);
                         isVisible = color >= 0;
+                        // Keep negative color for visibility but use absolute value for display
                     } catch (NumberFormatException e) {
                         logger.warn("Invalid color value: {}", value);
                         color = 7; // Default color
@@ -238,13 +239,13 @@ public class DxfReader {
         }
         
         if (!name.isEmpty()) {
-            layers.put(name, new DxfLayer(name, Math.abs(color), lineType, isVisible, new ArrayList<>()));
+            layers.put(name, new DxfLayer(name, color, lineType, isVisible, new ArrayList<>()));
         }
     }
     
     private String sanitizeName(String input) {
-        // Remove any non-alphanumeric characters except underscore and hyphen
-        return input.replaceAll("[^a-zA-Z0-9_-]", "_");
+        // Allow spaces in addition to alphanumeric, underscore, and hyphen
+        return input.replaceAll("[^a-zA-Z0-9_\\- ]", "_");
     }
     
     private void skipTable() {

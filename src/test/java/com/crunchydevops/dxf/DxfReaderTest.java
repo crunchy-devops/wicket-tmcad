@@ -103,6 +103,49 @@ class DxfReaderTest {
     }
 
     @Test
+    void testInvisibleLayer(@TempDir Path tempDir) throws IOException {
+        // Create a DXF file with an invisible layer (negative color)
+        Path dxfFile = tempDir.resolve("invisible.dxf");
+        String dxfContent = """
+            0
+            SECTION
+            2
+            TABLES
+            0
+            TABLE
+            2
+            LAYER
+            0
+            LAYER
+            2
+            HIDDEN_LAYER
+            70
+            0
+            62
+            -7
+            6
+            CONTINUOUS
+            0
+            ENDTAB
+            0
+            ENDSEC
+            0
+            EOF
+            """;
+        Files.writeString(dxfFile, dxfContent);
+
+        DxfReader reader = new DxfReader(dxfFile);
+        Map<String, DxfLayer> layers = reader.readLayers();
+        
+        assertTrue(layers.containsKey("HIDDEN_LAYER"));
+        DxfLayer layer = layers.get("HIDDEN_LAYER");
+        assertEquals("HIDDEN_LAYER", layer.name());
+        assertEquals(-7, layer.colorNumber()); // Negative color preserved
+        assertEquals("CONTINUOUS", layer.lineType());
+        assertFalse(layer.isVisible()); // Layer should be invisible
+    }
+
+    @Test
     void testInvalidDxfFile(@TempDir Path tempDir) throws IOException {
         // Create an invalid DXF file
         Path dxfFile = tempDir.resolve("invalid.dxf");

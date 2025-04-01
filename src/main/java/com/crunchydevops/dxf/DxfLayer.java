@@ -31,10 +31,10 @@ public record DxfLayer(String name, int colorNumber, String lineType, boolean is
             logger.warn("Layer name too long, truncating: {}", name);
             name = name.substring(0, MAX_NAME_LENGTH);
         }
-        name = name.replaceAll("[^a-zA-Z0-9_-]", "_");
+        name = name.replaceAll("[^a-zA-Z0-9_\\- ]", "_");
 
-        // Validate color number
-        if (colorNumber < 0 || colorNumber > 256) {
+        // Validate color number (preserve negative for visibility)
+        if (Math.abs(colorNumber) > 256) {
             logger.warn("Invalid color number {}, using default: 7", colorNumber);
             colorNumber = 7;
         }
@@ -48,7 +48,7 @@ public record DxfLayer(String name, int colorNumber, String lineType, boolean is
             logger.warn("Line type too long, truncating: {}", lineType);
             lineType = lineType.substring(0, MAX_LINE_TYPE_LENGTH);
         }
-        lineType = lineType.replaceAll("[^a-zA-Z0-9_-]", "_");
+        lineType = lineType.replaceAll("[^a-zA-Z0-9_\\- ]", "_");
 
         // Ensure entities list is immutable
         Objects.requireNonNull(entities, "Entities list cannot be null");
