@@ -12,7 +12,7 @@ import java.util.Objects;
  * Represents a layer in a DXF file.
  * Implements security best practices for data validation and immutability.
  */
-public record DxfLayer(String name, int colorNumber, String lineType, boolean visible,
+public record DxfLayer(String name, int colorNumber, String lineType, boolean isVisible,
                       List<DxfEntity> entities) {
     private static final Logger logger = LoggerFactory.getLogger(DxfLayer.class);
     private static final int MAX_NAME_LENGTH = 255;
@@ -55,7 +55,7 @@ public record DxfLayer(String name, int colorNumber, String lineType, boolean vi
         entities = Collections.unmodifiableList(new ArrayList<>(entities));
 
         logger.debug("Created layer: name='{}', color={}, lineType='{}', visible={}, entities={}",
-                    name, colorNumber, lineType, visible, entities.size());
+                    name, colorNumber, lineType, isVisible, entities.size());
     }
 
     /**
@@ -72,17 +72,17 @@ public record DxfLayer(String name, int colorNumber, String lineType, boolean vi
         Objects.requireNonNull(entity, "Entity cannot be null");
         var newEntities = new ArrayList<>(entities());
         newEntities.add(entity);
-        return new DxfLayer(name(), colorNumber(), lineType(), visible(), newEntities);
+        return new DxfLayer(name(), colorNumber(), lineType(), isVisible(), newEntities);
     }
 
     @Override
     public String toString() {
         return """
             Layer: %s
-            Color: %d
+            Color Number: %d
             Line Type: %s
-            Visible: %s
+            Visible: %b
             Entity Count: %d
-            """.formatted(name, colorNumber, lineType, visible, entities.size());
+            """.formatted(name, colorNumber, lineType, isVisible, entities.size());
     }
 }
